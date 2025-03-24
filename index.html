@@ -1,19 +1,107 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple HTML Page</title>
+    <title>API Dashboard</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin: 50px;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; text-align: center; }
+        button { padding: 10px; cursor: pointer; margin: 10px 5px; }
+        ul { list-style: none; padding: 0; }
+        li { background: #f3f3f3; margin: 5px 0; padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
-    <h1>Welcome to My Simple HTML Page</h1>
-    <p>This is a basic HTML file with a title and some text.</p>
+
+    <h2>API Dashboard</h2>
+
+    <div id="login-section">
+        <button onclick="login()">🔑 Inloggen</button>
+    </div>
+
+    <div id="app-section" class="hidden">
+        <h3>Welkom! Beheer je data hieronder:</h3>
+        <button onclick="fetchData()">🚀 Haal gegevens op</button>
+        <button onclick="addItem()">➕ Voeg item toe</button>
+        <ul id="data-list"></ul>
+    </div>
+
+    <script>
+        const apiUrl = "http://localhost:3000/api/items";
+        let apiKey = null;
+
+        function login() {
+            const username = prompt("Voer je gebruikersnaam in:");
+            const password = prompt("Voer je wachtwoord in:");
+            if (!username || !password) return;
+
+            fetch("http://localhost:3000/api/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.apiKey) {
+                    apiKey = data.apiKey;
+                    alert("✅ Ingelogd! Jouw API-key is opgeslagen.");
+                    document.getElementById("login-section").classList.add("hidden");
+                    document.getElementById("app-section").classList.remove("hidden");
+                } else {
+                    alert("❌ Ongeldige inloggegevens!");
+                }
+            })
+            .catch(error => console.error("❌ Fout:", error));
+        }
+
+        async function fetchData() {
+            if (!apiKey) return alert("❌ Log eerst in!");
+
+            const response = await fetch(apiUrl, {
+                headers: { "x-api-key": apiKey }
+            });
+
+            const data = await response.json();
+            const list = document.getElementById("data-list");
+            list.innerHTML = "";
+            
+            data.forEach(item => {
+                const li = document.createElement("li");
+                li.innerHTML = `${item.name} <button onclick="deleteItem(${item.id})">❌</button>`;
+                list.appendChild(li);
+            });
+        }
+
+        async function addItem() {
+            if (!apiKey) return alert("❌ Log eerst in!");
+
+            const name = prompt("Voer een naam in:");
+            if (!name) return;
+
+            await fetch(apiUrl, {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "x-api-key": apiKey
+                },
+                body: JSON.stringify({ name })
+            });
+
+            fetchData();
+        }
+
+        async function deleteItem(id) {
+            if (!apiKey) return alert("❌ Log eerst in!");
+
+            await fetch(`${apiUrl}/${id}`, {
+                method: "DELETE",
+                headers: { "x-api-key": apiKey }
+            });
+
+            fetchData();
+        }
+    </script>
+
 </body>
 </html>
